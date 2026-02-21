@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+outputs/Selected/
+outputs/Rejected/
+outputs/results.csv
+outputs/results.json
+outputs/*.png
+data/
+*.npy
+.DS_Store

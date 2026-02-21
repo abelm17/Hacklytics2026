@@ -1,0 +1,10 @@
+MAX_WIDTH = 1500
+BATCH_SIZE = 32
+CLUSTER_EPS = 0.35          # DBSCAN epsilon on normalized embeddings
+CLUSTER_MIN_SAMPLES = 2
+PHASH_THRESHOLD = 10         # Hamming distance for near-duplicate
+TOP_K_PER_CLUSTER = 1        # How many to select per cluster
+SCORE_THRESHOLD = 0.5        # Min score to be "selected"
+CLIP_MODEL = "openai/clip-vit-base-patch32"
+FACE_CONFIDENCE = 0.7
+RANDOM_SEED = 42
