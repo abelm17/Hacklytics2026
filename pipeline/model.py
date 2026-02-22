@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 from config import RANDOM_SEED, TOP_K_PER_CLUSTER, SCORE_THRESHOLD
 
-# ── Feature column groups ─────────────────────────────────────────────────────
+# Feature column groups 
 
 UNIVERSAL_COLS = [
     "sharpness", "brightness", "brightness_var", "contrast", "color_entropy",
@@ -45,7 +45,7 @@ ALL_FEATURE_COLS = (
 )
 
 
-# ── Heuristic scorers per photo type ─────────────────────────────────────────
+# Heuristic scorers per photo type 
 
 def _score_subject(s: pd.DataFrame) -> pd.Series:
     """
@@ -103,7 +103,7 @@ def _score_scenery(s: pd.DataFrame) -> pd.Series:
     )
 
 
-# ── Pseudo-label builder ──────────────────────────────────────────────────────
+# Pseudo-label builder
 
 def build_pseudo_labels(df: pd.DataFrame) -> pd.Series:
     """
@@ -129,8 +129,7 @@ def build_pseudo_labels(df: pd.DataFrame) -> pd.Series:
     return labels
 
 
-# ── Training ──────────────────────────────────────────────────────────────────
-
+# Training
 def _prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     """Encode photo_type and return feature matrix. Also stamps photo_type_enc onto df in-place."""
     df["photo_type_enc"] = df["photo_type"].map(PHOTO_TYPE_MAP).fillna(0).astype(int)
@@ -172,7 +171,7 @@ def train_ranker(df: pd.DataFrame, user_selected: list[str] = None):
     return model, scaler, ALL_FEATURE_COLS
 
 
-# ── Scoring & selection ───────────────────────────────────────────────────────
+# Scoring & selection 
 
 def predict_scores(model, scaler, df: pd.DataFrame) -> np.ndarray:
     X = _prepare_features(df)
