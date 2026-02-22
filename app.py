@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Custom CSS ───────────────────────────────────────────────────────────────
+# Custom CSS 
 st.markdown("""
 <style>
     .stApp { background: #13131f; }
@@ -60,12 +60,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────────────
+# Header
 st.title("📸 Photo Ranker")
 st.caption("Upload your photos · AI ranks and selects the best ones · See exactly why")
 st.divider()
 
-# ── How it works ──────────────────────────────────────────────────────────────
+# How it works
 with st.expander("ℹ️ How it works", expanded=False):
     st.markdown("""
     <div class="info-box">
@@ -79,7 +79,7 @@ with st.expander("ℹ️ How it works", expanded=False):
     <b>Supported:</b> JPEG / JPG &nbsp;|&nbsp; <b>Speed:</b> ~1000 photos in 2–3 min on CPU
     """, unsafe_allow_html=True)
 
-# ── Upload zone ───────────────────────────────────────────────────────────────
+# Upload zone
 st.subheader("📂 Step 1 — Upload Your Photos")
 st.markdown("""
 <div class="info-box">
@@ -99,7 +99,7 @@ uploaded_files = st.file_uploader(
         "nef", "nrw",
         # Sony
         "arw", "srf",
-        # Adobe / universal
+        # Adobe
         "dng",
         # Olympus
         "orf",
@@ -122,7 +122,7 @@ if uploaded_files:
 
 st.divider()
 
-# ── Options ───────────────────────────────────────────────────────────────────
+# Options
 st.subheader("⚙️ Step 2 — Options")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
@@ -146,7 +146,7 @@ with st.expander("🎛 Personalisation — teach it your taste (optional)"):
 st.divider()
 run_btn = st.button("🚀 Rank My Photos", type="primary", disabled=not uploaded_files)
 
-# ── Pipeline ──────────────────────────────────────────────────────────────────
+# Pipeline
 if run_btn and uploaded_files:
     t_start = time.time()
 
@@ -166,25 +166,25 @@ if run_btn and uploaded_files:
             st.error("No valid JPEG images found.")
             shutil.rmtree(tmp_dir, ignore_errors=True)
             st.stop()
-        st.write(f"✅ Loaded **{len(records)}** images")
+        st.write(f" Loaded **{len(records)}** images")
 
-        st.write("🔬 Extracting quality features (sharpness, brightness, faces, eye openness)…")
+        st.write(" Extracting quality features (sharpness, brightness, faces, eye openness)…")
         from pipeline.features import extract_all_features
         extract_all_features(records)
-        st.write("✅ Features extracted")
+        st.write(" Features extracted")
 
-        st.write("🧠 Computing CLIP semantic embeddings…")
+        st.write(" Computing CLIP semantic embeddings…")
         from pipeline.embeddings import compute_clip_embeddings
         embeddings = compute_clip_embeddings(records)
-        st.write("✅ Embeddings ready")
+        st.write(" Embeddings ready")
 
-        st.write("🗂 Clustering similar / burst shots…")
+        st.write(" Clustering similar / burst shots…")
         from pipeline.cluster import cluster_images
         cluster_images(records, embeddings)
         n_clusters = len(set(r["cluster"] for r in records))
-        st.write(f"✅ Found **{n_clusters}** clusters")
+        st.write(f" Found **{n_clusters}** clusters")
 
-        st.write("🏋️ Training XGBoost ranker…")
+        st.write(" Training XGBoost ranker…")
         df = pd.DataFrame([
             {k: v for k, v in r.items() if k not in ("array", "embedding")}
             for r in records
@@ -194,15 +194,15 @@ if run_btn and uploaded_files:
         df["predicted_score"] = predict_scores(model, scaler, df)
         df = select_images(df)
         p3 = precision_at_k(df, k=3)
-        st.write(f"✅ Scores computed — Precision@3: **{p3:.3f}**")
+        st.write(f" Scores computed — Precision@3: **{p3:.3f}**")
 
-        st.write("📊 Generating SHAP explainability charts…")
+        st.write(" Generating SHAP explainability charts…")
         os.makedirs("outputs", exist_ok=True)
         from pipeline.explainer import generate_shap_plots, get_top_features_for_image
         shap_values = generate_shap_plots(model, scaler, df, feat_cols)
-        st.write("✅ SHAP charts generated")
+        st.write(" SHAP charts generated")
 
-        st.write("💾 Saving results…")
+        st.write(" Saving results…")
         from pipeline.output import save_results
         save_results(df)
 
@@ -218,9 +218,9 @@ if run_btn and uploaded_files:
                     if os.path.exists(img_path):
                         zf.write(img_path, row["filename"])
             selected_zip_bytes = zip_buf.getvalue()
-            st.write(f"✅ Zip of {len(selected_rows)} selected photos ready")
+            st.write(f" Zip of {len(selected_rows)} selected photos ready")
 
-        status.update(label="✅ All done!", state="complete")
+        status.update(label=" All done!", state="complete")
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
     elapsed = time.time() - t_start
@@ -235,7 +235,7 @@ if run_btn and uploaded_files:
         "p3": p3,
     })
 
-# ── Results ───────────────────────────────────────────────────────────────────
+# Results
 if "df" in st.session_state:
     df           = st.session_state["df"]
     shap_values  = st.session_state["shap_values"]
@@ -249,7 +249,7 @@ if "df" in st.session_state:
     n_rej      = n_total - n_sel
     n_clusters = df["cluster"].nunique()
 
-    # ── Downloads ─────────────────────────────────────────────────────────
+    # Downloads 
     st.divider()
     st.subheader("⬇️ Downloads")
     dl1, dl2 = st.columns(2)
@@ -272,7 +272,7 @@ if "df" in st.session_state:
                 use_container_width=True,
             )
 
-    # ── Metrics ───────────────────────────────────────────────────────────
+    # Metrics 
     st.divider()
     st.subheader("📈 Summary")
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -289,7 +289,7 @@ if "df" in st.session_state:
     tc.metric("🌄 Scenery (no faces)", int(type_counts.get("scenery", 0)))
     st.caption("Each type uses its own scoring formula — eye openness only affects portraits & groups, horizon/colour only affect scenery.")
 
-    # ── Cluster table ─────────────────────────────────────────────────────
+    # Cluster table
     st.divider()
     st.subheader("📦 Cluster / Burst Summary")
     st.caption("Similar or near-duplicate shots are grouped. Only the best from each group is selected.")
@@ -307,7 +307,7 @@ if "df" in st.session_state:
     cluster_summary[["best_score","avg_score"]] = cluster_summary[["best_score","avg_score"]].round(3)
     st.dataframe(cluster_summary, use_container_width=True, hide_index=True)
 
-    # ── SHAP ──────────────────────────────────────────────────────────────
+    # SHAP
     st.divider()
     st.subheader("🔍 Why These Photos? (SHAP Explainability)")
     st.caption("These charts show which image qualities had the most influence on the ranking decisions.")
@@ -317,7 +317,7 @@ if "df" in st.session_state:
     if os.path.exists("outputs/shap_summary.png"):
         cb.image("outputs/shap_summary.png", caption="SHAP Summary (purple = high value, red = low)")
 
-    # ── Selected grid ─────────────────────────────────────────────────────
+    # Selected grid 
     st.divider()
     st.subheader(f"🏆 Top {min(top_k, n_sel)} Selected Photos")
     st.caption("Best photo from each cluster. Green = what boosted the score. Red = what hurt it.")
@@ -347,7 +347,7 @@ if "df" in st.session_state:
                 icon = "🟢" if feat["shap"] > 0 else "🔴"
                 st.caption(f"{icon} {feat['feature']}: {feat['shap']:+.3f}")
 
-    # ── Full table ────────────────────────────────────────────────────────
+    # Full table
     st.divider()
     st.subheader("📊 All Photos — Full Scores")
     # Build display table with type-relevant columns only
@@ -372,12 +372,12 @@ if "df" in st.session_state:
         display_df, use_container_width=True, hide_index=True,
         column_config={
             "predicted_score": st.column_config.ProgressColumn("Score", min_value=0, max_value=1, format="%.3f"),
-            "selected": st.column_config.CheckboxColumn("✅ Selected"),
+            "selected": st.column_config.CheckboxColumn(" Selected"),
         },
     )
 
-    # ── Rejected ──────────────────────────────────────────────────────────
-    with st.expander(f"🗑 View rejected photos ({n_rej})"):
+    # Rejected
+    with st.expander(f" View rejected photos ({n_rej})"):
         rej_df = df[~df["selected"]].nlargest(24, "predicted_score").reset_index(drop=True)
         rej_cols = st.columns(4)
         for i, row in rej_df.iterrows():
@@ -393,7 +393,7 @@ if "df" in st.session_state:
                     pass
 
 else:
-    # ── Landing state ─────────────────────────────────────────────────────
+    # Landing state
     st.markdown("""
     <div class="info-box">
     👆 <b>To get started:</b> click <b>Browse files</b> above, navigate to your photo folder, 
