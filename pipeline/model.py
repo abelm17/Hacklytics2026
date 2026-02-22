@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 from config import RANDOM_SEED, TOP_K_PER_CLUSTER, SCORE_THRESHOLD
 
-# Feature column groups 
+# Feature column groups
 
 UNIVERSAL_COLS = [
     "sharpness", "brightness", "brightness_var", "contrast", "color_entropy",
@@ -103,7 +103,7 @@ def _score_scenery(s: pd.DataFrame) -> pd.Series:
     )
 
 
-# Pseudo-label builder
+# Pseudo-label builder 
 
 def build_pseudo_labels(df: pd.DataFrame) -> pd.Series:
     """
@@ -129,9 +129,12 @@ def build_pseudo_labels(df: pd.DataFrame) -> pd.Series:
     return labels
 
 
-# Training
+# Training 
+
 def _prepare_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Encode photo_type and return feature matrix. Also stamps photo_type_enc onto df in-place."""
+    """Encode photo_type and return feature matrix.
+    Writes photo_type_enc onto df in-place so it is available
+    later when explainer.py calls scaler.transform(df[feature_cols])."""
     df["photo_type_enc"] = df["photo_type"].map(PHOTO_TYPE_MAP).fillna(0).astype(int)
     return df[ALL_FEATURE_COLS].copy()
 
@@ -172,49 +175,52 @@ def train_ranker(df: pd.DataFrame, user_selected: list[str] = None):
 
 
 # Scoring & selection 
-
 def predict_scores(model, scaler, df: pd.DataFrame) -> np.ndarray:
     X = _prepare_features(df)
     return model.predict_proba(scaler.transform(X))[:, 1]
 
 
+# Minimum score a photo must reach to ever be selected.
+# Even if it is the best in its cluster, it will not be picked if it
+# scores below this floor.  Raise this to be more selective.
+MIN_SCORE_FLOOR = 0.35
+
 def select_images(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Select images per cluster with a hard cap to prevent burst bloat:
+    Select the best photos per cluster, subject to two constraints:
 
-    - Clusters with 1–2 images   → select the best 1
-    - Clusters with 3–6 images   → select the best 2  (one burst, two keepers max)
-    - Clusters with 7+ images    → select the best 3  (hard cap regardless of size)
+    1. SCORE FLOOR — a photo must score >= MIN_SCORE_FLOOR to be eligible
+       at all.  This prevents clearly poor photos from being chosen just
+       because every other photo in their cluster was equally bad.
 
-    Additionally, any image scoring >= SCORE_THRESHOLD + 0.2 globally is
-    selected, but still capped at 3 per cluster to avoid flooding from a
-    single long burst.
+    2. BURST CAP — limits how many photos can be selected from any one
+       cluster regardless of how many pass the floor:
+         - 1–15 photos in cluster  → at most 1 selected
+         - 16–30 photos            → at most 2 selected
+         - 31+ photos              → at most 3 selected
+
+    No global overrides or second-pass quota filling — if nothing in a
+    cluster clears the floor, nothing from that cluster is selected.
     """
     df = df.copy()
     df["selected"] = False
 
     for _cluster_id, group in df.groupby("cluster"):
+        # Only consider photos that clear the minimum score floor
+        eligible = group[group["predicted_score"] >= MIN_SCORE_FLOOR]
+        if eligible.empty:
+            continue   # nothing good enough in this cluster — skip entirely
+
         n = len(group)
         if n <= 15:
             cap = 1
         elif n <= 30:
             cap = 2
         else:
-            cap = 3   # hard ceiling even for very large burst clusters
+            cap = 3
 
-        top_idx = group["predicted_score"].nlargest(cap).index
+        top_idx = eligible["predicted_score"].nlargest(cap).index
         df.loc[top_idx, "selected"] = True
-
-    # High-confidence global boost — but still respect per-cluster cap of 3
-    for _cluster_id, group in df.groupby("cluster"):
-        already_selected = group["selected"].sum()
-        if already_selected >= 3:
-            continue
-        remaining_cap = 3 - already_selected
-        high_conf = group[
-            (~group["selected"]) & (group["predicted_score"] >= SCORE_THRESHOLD + 0.2)
-        ].nlargest(remaining_cap, "predicted_score").index
-        df.loc[high_conf, "selected"] = True
 
     return df
 
