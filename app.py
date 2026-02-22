@@ -90,10 +90,32 @@ Or just drag and drop files directly onto the box. Both work.
 
 uploaded_files = st.file_uploader(
     label="Drop photos here, or click Browse files to select your photo folder",
-    type=["jpg", "jpeg"],
+    type=[
+        # JPEG
+        "jpg", "jpeg",
+        # Canon
+        "cr2", "cr3",
+        # Nikon
+        "nef", "nrw",
+        # Sony
+        "arw", "srf",
+        # Adobe / universal
+        "dng",
+        # Olympus
+        "orf",
+        # Panasonic
+        "rw2",
+        # Fujifilm
+        "raf",
+        # Pentax
+        "pef", "ptx",
+        # Samsung
+        "srw",
+    ],
     accept_multiple_files=True,
-    help="Select all JPEGs you want ranked. Ctrl+A or Cmd+A in the file picker selects them all at once.",
+    help="Select all photos you want ranked. Supports JPEG and RAW formats (CR2, CR3, NEF, ARW, DNG, ORF, RW2, RAF and more). Ctrl+A or Cmd+A selects everything at once.",
 )
+
 
 if uploaded_files:
     st.success(f"✅ {len(uploaded_files)} photo{'s' if len(uploaded_files) != 1 else ''} loaded and ready")
