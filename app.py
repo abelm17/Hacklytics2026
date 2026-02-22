@@ -1,14 +1,9 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import os
-import time
 import tempfile
 import shutil
 from PIL import Image
 
 st.set_page_config(
-    page_title="📸 Photo Ranker",
+    page_title="Photo Ranker",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -61,12 +56,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header
-st.title("📸 Photo Ranker")
+st.title("Photo Ranker")
 st.caption("Upload your photos · AI ranks and selects the best ones · See exactly why")
 st.divider()
 
 # How it works
-with st.expander("ℹ️ How it works", expanded=False):
+with st.expander("How it works", expanded=False):
     st.markdown("""
     <div class="info-box">
     <b>1. Upload</b> — Select your JPEG photos using the uploader below. Use <b>Ctrl+A / Cmd+A</b> in the file picker to grab a whole folder at once.<br><br>
@@ -76,11 +71,11 @@ with st.expander("ℹ️ How it works", expanded=False):
     <b>5. Explain</b> — SHAP charts show exactly which features drove each photo's score.<br><br>
     <b>6. Download</b> — Export your selected photos as a zip, or download the full scores CSV.
     </div>
-    <b>Supported:</b> JPEG / JPG &nbsp;|&nbsp; <b>Speed:</b> ~1000 photos in 2–3 min on CPU
+    <b>Supported:</b> JPEG / JPG &nbsp;|&nbsp; <b>Speed:</b> ~1000 photos in 2-3 min on CPU
     """, unsafe_allow_html=True)
 
 # Upload zone
-st.subheader("📂 Step 1 — Upload Your Photos")
+st.subheader("Step 1 — Upload Your Photos")
 st.markdown("""
 <div class="info-box">
 Click <b>Browse files</b> → go to your photo folder → hit <b>Ctrl+A</b> (Windows) or <b>Cmd+A</b> (Mac) to select everything → click Open.<br>
@@ -118,19 +113,19 @@ uploaded_files = st.file_uploader(
 
 
 if uploaded_files:
-    st.success(f"✅ {len(uploaded_files)} photo{'s' if len(uploaded_files) != 1 else ''} loaded and ready")
+    st.success(f"{len(uploaded_files)} photo{'s' if len(uploaded_files) != 1 else ''} loaded and ready")
 
 st.divider()
 
 # Options
-st.subheader("⚙️ Step 2 — Options")
+st.subheader("Step 2 — Options")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
     top_k = st.slider("Photos to show in results grid", 4, 40, 12, 4)
 with col_opt2:
     make_zip = st.checkbox("Create downloadable zip of selected photos", value=True)
 
-with st.expander("🎛 Personalisation — teach it your taste (optional)"):
+with st.expander("Personalisation — teach it your taste (optional)"):
     st.caption(
         "Run once first. Then paste filenames of photos you liked and re-run to retrain on your preferences."
     )
@@ -141,10 +136,10 @@ with st.expander("🎛 Personalisation — teach it your taste (optional)"):
     )
     user_picks = [x.strip() for x in user_picks_raw.strip().splitlines() if x.strip()]
     if user_picks:
-        st.info(f"🎯 {len(user_picks)} preferred photos will personalise the ranking")
+        st.info(f"{len(user_picks)} preferred photos will personalise the ranking")
 
 st.divider()
-run_btn = st.button("🚀 Rank My Photos", type="primary", disabled=not uploaded_files)
+run_btn = st.button("Rank My Photos", type="primary", disabled=not uploaded_files)
 
 # Pipeline
 if run_btn and uploaded_files:
@@ -157,34 +152,34 @@ if run_btn and uploaded_files:
         with open(dest, "wb") as f:
             f.write(uf.getbuffer())
 
-    with st.status("🔄 Running pipeline…", expanded=True) as status:
+    with st.status("Running pipeline...", expanded=True) as status:
 
-        st.write(f"📂 Saved {len(uploaded_files)} photos for processing…")
+        st.write(f"Saved {len(uploaded_files)} photos for processing...")
         from pipeline.ingest import load_images
         records = load_images(tmp_dir)
         if not records:
             st.error("No valid JPEG images found.")
             shutil.rmtree(tmp_dir, ignore_errors=True)
             st.stop()
-        st.write(f" Loaded **{len(records)}** images")
+        st.write(f"Loaded **{len(records)}** images")
 
-        st.write(" Extracting quality features (sharpness, brightness, faces, eye openness)…")
+        st.write("Extracting quality features (sharpness, brightness, faces, eye openness)...")
         from pipeline.features import extract_all_features
         extract_all_features(records)
-        st.write(" Features extracted")
+        st.write("Features extracted")
 
-        st.write(" Computing CLIP semantic embeddings…")
+        st.write("Computing CLIP semantic embeddings...")
         from pipeline.embeddings import compute_clip_embeddings
         embeddings = compute_clip_embeddings(records)
-        st.write(" Embeddings ready")
+        st.write("Embeddings ready")
 
-        st.write(" Clustering similar / burst shots…")
+        st.write("Clustering similar / burst shots...")
         from pipeline.cluster import cluster_images
         cluster_images(records, embeddings)
         n_clusters = len(set(r["cluster"] for r in records))
-        st.write(f" Found **{n_clusters}** clusters")
+        st.write(f"Found **{n_clusters}** clusters")
 
-        st.write(" Training XGBoost ranker…")
+        st.write("Training XGBoost ranker...")
         df = pd.DataFrame([
             {k: v for k, v in r.items() if k not in ("array", "embedding")}
             for r in records
@@ -194,15 +189,15 @@ if run_btn and uploaded_files:
         df["predicted_score"] = predict_scores(model, scaler, df)
         df = select_images(df)
         p3 = precision_at_k(df, k=3)
-        st.write(f" Scores computed — Precision@3: **{p3:.3f}**")
+        st.write(f"Scores computed — Precision@3: **{p3:.3f}**")
 
-        st.write(" Generating SHAP explainability charts…")
+        st.write("Generating SHAP explainability charts...")
         os.makedirs("outputs", exist_ok=True)
         from pipeline.explainer import generate_shap_plots, get_top_features_for_image
         shap_values = generate_shap_plots(model, scaler, df, feat_cols)
-        st.write(" SHAP charts generated")
+        st.write("SHAP charts generated")
 
-        st.write(" Saving results…")
+        st.write("Saving results...")
         from pipeline.output import save_results
         save_results(df)
 
@@ -218,9 +213,9 @@ if run_btn and uploaded_files:
                     if os.path.exists(img_path):
                         zf.write(img_path, row["filename"])
             selected_zip_bytes = zip_buf.getvalue()
-            st.write(f" Zip of {len(selected_rows)} selected photos ready")
+            st.write(f"Zip of {len(selected_rows)} selected photos ready")
 
-        status.update(label=" All done!", state="complete")
+        status.update(label="All done!", state="complete")
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
     elapsed = time.time() - t_start
@@ -251,12 +246,12 @@ if "df" in st.session_state:
 
     # Downloads 
     st.divider()
-    st.subheader("⬇️ Downloads")
+    st.subheader("Downloads")
     dl1, dl2 = st.columns(2)
     with dl1:
         csv_bytes = df.drop(columns=["array","embedding"], errors="ignore").to_csv(index=False).encode()
         st.download_button(
-            "📄 Download Full Results CSV",
+            "Download Full Results CSV",
             data=csv_bytes,
             file_name="photo_ranker_results.csv",
             mime="text/csv",
@@ -265,7 +260,7 @@ if "df" in st.session_state:
     with dl2:
         if selected_zip:
             st.download_button(
-                f"📦 Download Selected Photos ZIP ({n_sel} photos)",
+                f"Download Selected Photos ZIP ({n_sel} photos)",
                 data=selected_zip,
                 file_name="selected_photos.zip",
                 mime="application/zip",
@@ -274,24 +269,24 @@ if "df" in st.session_state:
 
     # Metrics 
     st.divider()
-    st.subheader("📈 Summary")
+    st.subheader("Summary")
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Total Photos", n_total)
-    c2.metric("✅ Selected", n_sel)
-    c3.metric("❌ Rejected", n_rej)
-    c4.metric("📦 Clusters", n_clusters)
-    c5.metric("⏱ Time", f"{elapsed:.0f}s")
+    c2.metric("Selected", n_sel)
+    c3.metric("Rejected", n_rej)
+    c4.metric("Clusters", n_clusters)
+    c5.metric("Time", f"{elapsed:.0f}s")
 
     type_counts = df["photo_type"].value_counts()
     ta, tb, tc = st.columns(3)
-    ta.metric("🧍 Subject (1 face)",   int(type_counts.get("subject", 0)))
-    tb.metric("👥 Group (2+ faces)",   int(type_counts.get("group",   0)))
-    tc.metric("🌄 Scenery (no faces)", int(type_counts.get("scenery", 0)))
+    ta.metric("Subject (1 face)",   int(type_counts.get("subject", 0)))
+    tb.metric("Group (2+ faces)",   int(type_counts.get("group",   0)))
+    tc.metric("Scenery (no faces)", int(type_counts.get("scenery", 0)))
     st.caption("Each type uses its own scoring formula — eye openness only affects portraits & groups, horizon/colour only affect scenery.")
 
     # Cluster table
     st.divider()
-    st.subheader("📦 Cluster / Burst Summary")
+    st.subheader("Cluster / Burst Summary")
     st.caption("Similar or near-duplicate shots are grouped. Only the best from each group is selected.")
     cluster_summary = (
         df.groupby("cluster")
@@ -309,7 +304,7 @@ if "df" in st.session_state:
 
     # SHAP
     st.divider()
-    st.subheader("🔍 Why These Photos? (SHAP Explainability)")
+    st.subheader("Why These Photos? (SHAP Explainability)")
     st.caption("These charts show which image qualities had the most influence on the ranking decisions.")
     ca, cb = st.columns(2)
     if os.path.exists("outputs/shap_importance.png"):
@@ -319,7 +314,7 @@ if "df" in st.session_state:
 
     # Selected grid 
     st.divider()
-    st.subheader(f"🏆 Top {min(top_k, n_sel)} Selected Photos")
+    st.subheader(f"Top {min(top_k, n_sel)} Selected Photos")
     st.caption("Best photo from each cluster. Green = what boosted the score. Red = what hurt it.")
 
     top_df = df[df["selected"]].nlargest(top_k, "predicted_score").reset_index(drop=True)
@@ -339,17 +334,17 @@ if "df" in st.session_state:
 
             score = float(row["predicted_score"])
             st.progress(score, text=f"Score {score:.3f}")
-            type_icon = {"subject": "🧍", "group": "👥", "scenery": "🌄"}.get(row.get("photo_type",""), "📷")
-            st.caption(f"{type_icon} {row.get('photo_type','unknown')} · Cluster {int(row['cluster'])} · {row['filename']}")
+            type_label = {"subject": "Subject", "group": "Group", "scenery": "Scenery"}.get(row.get("photo_type",""), "Photo")
+            st.caption(f"{type_label} · Cluster {int(row['cluster'])} · {row['filename']}")
 
             top_feats = get_top_features_for_image(shap_values, row.name, feat_cols, top_n=3)
             for feat in top_feats:
-                icon = "🟢" if feat["shap"] > 0 else "🔴"
-                st.caption(f"{icon} {feat['feature']}: {feat['shap']:+.3f}")
+                icon = "+" if feat["shap"] > 0 else "-"
+                st.caption(f"[{icon}] {feat['feature']}: {feat['shap']:+.3f}")
 
     # Full table
     st.divider()
-    st.subheader("📊 All Photos — Full Scores")
+    st.subheader("All Photos — Full Scores")
     # Build display table with type-relevant columns only
     base_display = ["filename", "photo_type", "cluster", "predicted_score", "selected",
                     "sharpness", "brightness", "contrast", "face_count"]
@@ -372,12 +367,12 @@ if "df" in st.session_state:
         display_df, use_container_width=True, hide_index=True,
         column_config={
             "predicted_score": st.column_config.ProgressColumn("Score", min_value=0, max_value=1, format="%.3f"),
-            "selected": st.column_config.CheckboxColumn(" Selected"),
+            "selected": st.column_config.CheckboxColumn("Selected"),
         },
     )
 
     # Rejected
-    with st.expander(f" View rejected photos ({n_rej})"):
+    with st.expander(f"View rejected photos ({n_rej})"):
         rej_df = df[~df["selected"]].nlargest(24, "predicted_score").reset_index(drop=True)
         rej_cols = st.columns(4)
         for i, row in rej_df.iterrows():
@@ -396,13 +391,13 @@ else:
     # Landing state
     st.markdown("""
     <div class="info-box">
-    👆 <b>To get started:</b> click <b>Browse files</b> above, navigate to your photo folder, 
+    <b>To get started:</b> click <b>Browse files</b> above, navigate to your photo folder, 
     press <b>Ctrl+A</b> or <b>Cmd+A</b> to select all photos, then click <b>Rank My Photos</b>.<br><br>
     No folders to create. No config needed. Everything is automatic.
     </div>
     """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
-    col1.markdown("**🔬 Per-type scoring**\n🧍 Subject: eye openness, smile, face sharpness, exposure\n\n👥 Group: % eyes open, blink penalty, face sharpness, visibility\n\n🌄 Scenery: sharpness, exposure, horizon level, colour, composition")
-    col2.markdown("**🤖 AI models used**\nCLIP (semantic understanding) · MediaPipe (face/eye/mesh detection) · XGBoost (ranking)")
-    col3.markdown("**📊 Outputs**\nSelected photo zip · Full CSV · SHAP charts · Cluster breakdown by type")
+    col1.markdown("**Per-type scoring**\nSubject: eye openness, smile, face sharpness, exposure\n\nGroup: % eyes open, blink penalty, face sharpness, visibility\n\nScenery: sharpness, exposure, horizon level, colour, composition")
+    col2.markdown("**AI models used**\nCLIP (semantic understanding) · MediaPipe (face/eye/mesh detection) · XGBoost (ranking)")
+    col3.markdown("**Outputs**\nSelected photo zip · Full CSV · SHAP charts · Cluster breakdown by type")
