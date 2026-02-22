@@ -21,11 +21,11 @@ from scipy.stats import entropy as scipy_entropy
 mp_face    = mp.solutions.face_detection
 mp_mesh    = mp.solutions.face_mesh
 
-# ── MediaPipe eye landmark indices (EAR) ─────────────────────────────────────
+# MediaPipe eye landmark indices (EAR) 
 LEFT_EYE  = [362, 385, 387, 263, 373, 380]
 RIGHT_EYE = [33,  160, 158, 133, 153, 144]
 
-# ── Mouth landmark indices (simple smile proxy via mouth-corner height) ───────
+# Mouth landmark indices (simple smile proxy via mouth-corner height)
 MOUTH_LEFT  = 61
 MOUTH_RIGHT = 291
 MOUTH_TOP   = 13
@@ -49,14 +49,14 @@ def extract_all_features(records: list[dict]) -> list[dict]:
         arr  = rec["array"]                           # RGB uint8
         gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
 
-        # ── Universal features (all photo types) ─────────────────────────
+        # Universal features (all photo types) 
         rec["sharpness"]      = _sharpness(gray)
         rec["brightness"]     = float(np.mean(gray)) / 255.0   # normalise to 0-1
         rec["brightness_var"] = float(np.var(gray))  / (255.0 ** 2)
         rec["contrast"]       = float(gray.std())    / 255.0
         rec["color_entropy"]  = _color_entropy(arr)
 
-        # ── Face detection ────────────────────────────────────────────────
+        # Face detection 
         det_results = face_det.process(arr)
         detections  = det_results.detections if det_results.detections else []
         face_count  = len(detections)
@@ -71,7 +71,7 @@ def extract_all_features(records: list[dict]) -> list[dict]:
             photo_type = "group"
         rec["photo_type"] = photo_type
 
-        # ── Face mesh (needed for eye/expression features) ────────────────
+        # Face mesh (needed for eye/expression features) 
         mesh_results = face_mesh.process(arr) if face_count > 0 else None
         all_landmarks = (mesh_results.multi_face_landmarks
                          if mesh_results and mesh_results.multi_face_landmarks
@@ -79,7 +79,7 @@ def extract_all_features(records: list[dict]) -> list[dict]:
 
         h, w = arr.shape[:2]
 
-        # ── Subject features (face_count == 1) ───────────────────────────
+        # Subject features (face_count == 1)
         if photo_type == "subject":
             bb      = detections[0].location_data.relative_bounding_box
             face_area = bb.width * bb.height
@@ -104,7 +104,7 @@ def extract_all_features(records: list[dict]) -> list[dict]:
             rec.update(_neutral_group())
             rec.update(_neutral_scenery())
 
-        # ── Group features (face_count >= 2) ─────────────────────────────
+        # Group features (face_count >= 2)
         elif photo_type == "group":
             face_areas = []
             for det in detections:
@@ -153,7 +153,7 @@ def extract_all_features(records: list[dict]) -> list[dict]:
             rec.update(_neutral_subject())
             rec.update(_neutral_scenery())
 
-        # ── Scenery features (face_count == 0) ───────────────────────────
+        # Scenery features (face_count == 0) 
         else:
             rec["scen_global_sharpness"]  = rec["sharpness"]
             rec["scen_exposure_quality"]  = _exposure_score(gray)
@@ -170,9 +170,8 @@ def extract_all_features(records: list[dict]) -> list[dict]:
     return records
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Universal helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _sharpness(gray: np.ndarray) -> float:
     """Laplacian variance — higher = sharper."""
@@ -223,9 +222,8 @@ def _composition_score(arr: np.ndarray) -> float:
     return float(score)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Subject / portrait helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _ear_score(landmarks, w: int, h: int) -> float:
     """Eye Aspect Ratio → normalised 0-1 (1 = fully open)."""
@@ -268,9 +266,8 @@ def _roi_sharpness(gray: np.ndarray, bb, h: int, w: int) -> float:
     return float(min(cv2.Laplacian(roi, cv2.CV_64F).var() / 3000.0, 1.0))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Group helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _background_face_contrast(arr: np.ndarray, gray: np.ndarray,
                                detections, h: int, w: int) -> float:
@@ -295,9 +292,8 @@ def _background_face_contrast(arr: np.ndarray, gray: np.ndarray,
     return float(min(contrast * 2.5, 1.0))   # scale so 0.4 difference → 1.0
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Scenery helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _dynamic_range(gray: np.ndarray) -> float:
     """
@@ -352,9 +348,7 @@ def _color_score(arr: np.ndarray) -> float:
     return float(min(score, 1.0))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Neutral value fillers (used when photo type doesn't apply)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _neutral_subject() -> dict:
     return {
