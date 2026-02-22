@@ -34,12 +34,6 @@ streamlit run app.py
 ```
 Then open http://localhost:8501 in your browser.
 
-### 4. Or run headless (no UI)
-```bash
-python run_pipeline.py --folder ./my_photos
-python run_pipeline.py --folder ./my_photos --copy   # also sorts into Selected/Rejected folders
-```
-
 ------------
 
 ## Our Project Structure
