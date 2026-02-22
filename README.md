@@ -1,10 +1,14 @@
-# 📸 Photo Ranker MVP
+PicMyPic
 
-AI-powered photo selection pipeline for hackathons. Processes 500–3000 JPEG images, extracts visual features, clusters similar shots, and ranks them using an XGBoost model with SHAP explainability.
+AI-powered photo selection pipeline for Georgia Tech's Hacklytics. Processes 2–3000 raw or JPEG images, extracts visual features, clusters similar shots, and ranks them using an XGBoost model with SHAP explainability.
 
----
+-----------
 
-## 🚀 Quick Start
+## How to get started
+
+git clone https://github.com/abelm17/Hacklytics2026
+
+cd Hacklytics2026
 
 ### 1. Install dependencies
 ```bash
@@ -34,9 +38,9 @@ python run_pipeline.py --folder ./my_photos
 python run_pipeline.py --folder ./my_photos --copy   # also sorts into Selected/Rejected folders
 ```
 
----
+------------
 
-## 📁 Project Structure
+## Our Project Structure
 
 ```
 photo_ranker/
@@ -63,9 +67,9 @@ photo_ranker/
 └── sample_images/            # Put your test JPEGs here
 ```
 
----
+-------------
 
-## ⚙️ Configuration (`config.py`)
+## Configuration (`config.py`)
 
 | Setting | Default | Description |
 |---|---|---|
@@ -76,10 +80,13 @@ photo_ranker/
 | `TOP_K_PER_CLUSTER` | 1 | Best images selected per cluster |
 | `SCORE_THRESHOLD` | 0.5 | Min score to be auto-selected |
 | `CLIP_MODEL` | `clip-vit-base-patch32` | Hugging Face model ID |
+| `FACE_CONFIDENCE` | 0.7 | Threshold for facial confidence |
+| `RANDOM_SEED` | 42 | Random Seed |
 
----
 
-## 🧠 Features Extracted
+-----------
+
+## Extracted Feature
 
 | Feature | Method |
 |---|---|
@@ -92,9 +99,9 @@ photo_ranker/
 | Largest face area ratio | Bounding box area |
 | Eye openness | MediaPipe FaceMesh EAR |
 
----
+-------------
 
-## ⚡ Performance
+## Performance
 
 | Images | CPU time (approx) |
 |---|---|
@@ -104,9 +111,9 @@ photo_ranker/
 
 GPU (CUDA) reduces CLIP embedding time by ~4–6x.
 
----
+-----------
 
-## 📊 Output Files
+## Output Files
 
 - `outputs/results.csv` — all images with scores, clusters, selected flag
 - `outputs/results.json` — same data as JSON
