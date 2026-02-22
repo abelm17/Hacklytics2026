@@ -260,14 +260,26 @@ if "df" in st.session_state:
     c4.metric("📦 Clusters", n_clusters)
     c5.metric("⏱ Time", f"{elapsed:.0f}s")
 
+    type_counts = df["photo_type"].value_counts()
+    ta, tb, tc = st.columns(3)
+    ta.metric("🧍 Subject (1 face)",   int(type_counts.get("subject", 0)))
+    tb.metric("👥 Group (2+ faces)",   int(type_counts.get("group",   0)))
+    tc.metric("🌄 Scenery (no faces)", int(type_counts.get("scenery", 0)))
+    st.caption("Each type uses its own scoring formula — eye openness only affects portraits & groups, horizon/colour only affect scenery.")
+
     # ── Cluster table ─────────────────────────────────────────────────────
     st.divider()
     st.subheader("📦 Cluster / Burst Summary")
     st.caption("Similar or near-duplicate shots are grouped. Only the best from each group is selected.")
     cluster_summary = (
         df.groupby("cluster")
-        .agg(photos=("filename","count"), best_score=("predicted_score","max"),
-             avg_score=("predicted_score","mean"), selected=("selected","sum"))
+        .agg(
+            photos     =("filename",        "count"),
+            photo_type =("photo_type",      lambda x: x.mode()[0]),
+            best_score =("predicted_score", "max"),
+            avg_score  =("predicted_score", "mean"),
+            selected   =("selected",        "sum"),
+        )
         .reset_index().sort_values("best_score", ascending=False)
     )
     cluster_summary[["best_score","avg_score"]] = cluster_summary[["best_score","avg_score"]].round(3)
@@ -305,7 +317,8 @@ if "df" in st.session_state:
 
             score = float(row["predicted_score"])
             st.progress(score, text=f"Score {score:.3f}")
-            st.caption(f"Cluster {int(row['cluster'])} · {row['filename']}")
+            type_icon = {"subject": "🧍", "group": "👥", "scenery": "🌄"}.get(row.get("photo_type",""), "📷")
+            st.caption(f"{type_icon} {row.get('photo_type','unknown')} · Cluster {int(row['cluster'])} · {row['filename']}")
 
             top_feats = get_top_features_for_image(shap_values, row.name, feat_cols, top_n=3)
             for feat in top_feats:
@@ -315,12 +328,23 @@ if "df" in st.session_state:
     # ── Full table ────────────────────────────────────────────────────────
     st.divider()
     st.subheader("📊 All Photos — Full Scores")
-    display_cols = ["filename","cluster","predicted_score","selected",
-                    "sharpness","brightness","contrast","face_count","eye_openness"]
+    # Build display table with type-relevant columns only
+    base_display = ["filename", "photo_type", "cluster", "predicted_score", "selected",
+                    "sharpness", "brightness", "contrast", "face_count"]
+    # Add type-specific columns if they exist
+    type_extra = {
+        "subject": ["subj_eye_openness", "subj_smile_score", "subj_face_sharpness"],
+        "group":   ["grp_eyes_open_pct", "grp_min_eye_openness", "grp_min_face_sharpness"],
+        "scenery": ["scen_global_sharpness", "scen_exposure_quality", "scen_color_score"],
+    }
+    extra_cols = []
+    for cols in type_extra.values():
+        extra_cols += [c for c in cols if c in df.columns]
+    display_cols = base_display + list(dict.fromkeys(extra_cols))   # dedupe, preserve order
+    display_cols = [c for c in display_cols if c in df.columns]
     display_df = df[display_cols].sort_values("predicted_score", ascending=False).copy()
-    for col in ["predicted_score","brightness","contrast","eye_openness"]:
+    for col in display_df.select_dtypes("float64").columns:
         display_df[col] = display_df[col].round(3)
-    display_df["sharpness"] = display_df["sharpness"].round(1)
 
     st.dataframe(
         display_df, use_container_width=True, hide_index=True,
@@ -357,6 +381,6 @@ else:
     """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
-    col1.markdown("**🔬 Features extracted**\nSharpness · Brightness · Contrast · Color entropy · Faces · Eye openness")
-    col2.markdown("**🤖 AI models used**\nCLIP (semantic understanding) · MediaPipe (face/eye detection) · XGBoost (ranking)")
-    col3.markdown("**📊 Outputs**\nSelected photo zip · Full CSV · SHAP charts · Cluster breakdown")
+    col1.markdown("**🔬 Per-type scoring**\n🧍 Subject: eye openness, smile, face sharpness, exposure\n\n👥 Group: % eyes open, blink penalty, face sharpness, visibility\n\n🌄 Scenery: sharpness, exposure, horizon level, colour, composition")
+    col2.markdown("**🤖 AI models used**\nCLIP (semantic understanding) · MediaPipe (face/eye/mesh detection) · XGBoost (ranking)")
+    col3.markdown("**📊 Outputs**\nSelected photo zip · Full CSV · SHAP charts · Cluster breakdown by type")
