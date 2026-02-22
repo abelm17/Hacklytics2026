@@ -4,8 +4,13 @@ from PIL import Image, ExifTags
 import numpy as np
 from tqdm import tqdm
 from config import MAX_WIDTH
+import rawpy
 
-SUPPORTED = {".jpg", ".jpeg", ".JPG", ".JPEG"}
+SUPPORTED_JPEG = {".jpg", ".jpeg", ".JPG", ".JPEG"}
+SUPPORTED_RAW  = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2",
+                  ".raf", ".pef", ".srw", ".CR2", ".CR3", ".NEF", ".ARW",
+                  ".DNG", ".ORF", ".RW2", ".RAF", ".PEF", ".SRW"}
+SUPPORTED = SUPPORTED_JPEG | SUPPORTED_RAW
 
 def load_images(folder: str) -> list[dict]:
     """Return list of dicts with path, array, metadata."""
@@ -13,22 +18,35 @@ def load_images(folder: str) -> list[dict]:
     records = []
     for path in tqdm(paths, desc="Loading images"):
         try:
-            img = Image.open(path).convert("RGB")
-            timestamp = _get_timestamp(img, path)
-            img = _resize(img)
-            arr = np.array(img)
-            records.append({
-                "path": str(path),
-                "filename": path.name,
-                "array": arr,
-                "timestamp": timestamp,
-                "width": arr.shape[1],
-                "height": arr.shape[0],
-            })
+            if path.suffix.lower() in {s.lower() for s in SUPPORTED_RAW}:
+                img = _load_raw(path)   # new function
+            else:
+                img = Image.open(path).convert("RGB")
+                timestamp = _get_timestamp(img, path)
+                img = _resize(img)
+                arr = np.array(img)
+                records.append({
+                    "path": str(path),
+                    "filename": path.name,
+                    "array": arr,
+                    "timestamp": timestamp,
+                    "width": arr.shape[1],
+                    "height": arr.shape[0],
+                })
         except Exception as e:
             print(f"[WARN] Skipping {path}: {e}")
     print(f"Loaded {len(records)} images from {folder}")
     return records
+
+def _load_raw(path: Path) -> Image.Image:
+    with rawpy.imread(str(path)) as raw:
+        rgb = raw.postprocess(
+            use_camera_wb=True,      # use the camera's white balance
+            half_size=True,          # 2x faster, still plenty of resolution
+            no_auto_bright=False,
+            output_bps=8,            # 8-bit output so it matches JPEG pipeline
+        )
+    return Image.fromarray(rgb)
 
 def _resize(img: Image.Image) -> Image.Image:
     w, h = img.size

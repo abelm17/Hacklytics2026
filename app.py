@@ -291,9 +291,9 @@ if "df" in st.session_state:
     st.caption("These charts show which image qualities had the most influence on the ranking decisions.")
     ca, cb = st.columns(2)
     if os.path.exists("outputs/shap_importance.png"):
-        ca.image("outputs/shap_importance.png", caption="Feature Importance", use_container_width=True)
+        ca.image("outputs/shap_importance.png", caption="Feature Importance")
     if os.path.exists("outputs/shap_summary.png"):
-        cb.image("outputs/shap_summary.png", caption="SHAP Summary (purple = high value, red = low)", use_container_width=True)
+        cb.image("outputs/shap_summary.png", caption="SHAP Summary (purple = high value, red = low)")
 
     # ── Selected grid ─────────────────────────────────────────────────────
     st.divider()
@@ -311,7 +311,7 @@ if "df" in st.session_state:
                 if arr is not None:
                     img = Image.fromarray(arr)
                     img.thumbnail((400, 400))
-                    st.image(img, use_container_width=True)
+                    st.image(img)
             except Exception:
                 st.warning(row["filename"])
 
@@ -365,7 +365,7 @@ if "df" in st.session_state:
                     if arr is not None:
                         img = Image.fromarray(arr)
                         img.thumbnail((300, 300))
-                        st.image(img, use_container_width=True)
+                        st.image(img)
                     st.caption(f"Score {row['predicted_score']:.3f} · {row['filename']}")
                 except Exception:
                     pass
