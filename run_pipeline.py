@@ -1,4 +1,4 @@
-"""Headless pipeline runner — no UI required."""
+"""Headless pipeline runner - No UI"""
 import argparse
 import time
 import pandas as pd
@@ -14,19 +14,19 @@ from pipeline.output import save_results, copy_to_folders
 def run(folder: str, copy: bool = False, user_selected: list[str] = None):
     t0 = time.time()
 
-    print("📂 Loading images...")
+    print(" Loading images...")
     records = load_images(folder)
     if not records:
         print("No images found. Exiting.")
         return
 
-    print("🔬 Extracting features...")
+    print(" Extracting features...")
     extract_all_features(records)
 
-    print("🧠 Computing CLIP embeddings...")
+    print(" Computing CLIP embeddings...")
     embeddings = compute_clip_embeddings(records)
 
-    print("🗂️ Clustering...")
+    print(" Clustering...")
     cluster_images(records, embeddings)
 
     df = pd.DataFrame([
@@ -34,15 +34,15 @@ def run(folder: str, copy: bool = False, user_selected: list[str] = None):
         for r in records
     ])
 
-    print("🤖 Training ranker...")
+    print(" Training ranker...")
     model, scaler, feat_cols = train_ranker(df, user_selected)
     df["predicted_score"] = predict_scores(model, scaler, df)
     df = select_images(df)
 
-    print("📊 Generating SHAP plots...")
+    print(" Generating SHAP plots...")
     generate_shap_plots(model, scaler, df, feat_cols)
 
-    print("💾 Saving results...")
+    print(" Saving results...")
     save_results(df)
     if copy:
         copy_to_folders(df)
@@ -50,7 +50,7 @@ def run(folder: str, copy: bool = False, user_selected: list[str] = None):
     elapsed = time.time() - t0
     p_at_3 = precision_at_k(df, k=3)
     print(f"\n{'='*40}")
-    print(f"✅ Done in {elapsed:.1f}s")
+    print(f"   Done in {elapsed:.1f}s")
     print(f"   Total images : {len(df)}")
     print(f"   Selected     : {df['selected'].sum()}")
     print(f"   Clusters     : {df['cluster'].nunique()}")
