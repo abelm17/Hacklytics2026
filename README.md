@@ -11,6 +11,8 @@ git clone https://github.com/abelm17/Hacklytics2026
 cd Hacklytics2026
 
 ### 1. Install dependencies
+*** MUST USE Python 3.10.11 ***
+
 ```bash
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
